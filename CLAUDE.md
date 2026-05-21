@@ -3,9 +3,9 @@
 ## What this project is
 An AI-powered job search assistant built with Streamlit + Anthropic Claude API.
 Phase 1: CV vs Job Description fit scorer.
-Phase 2 (planned): Cover letter generator.
-Phase 3 (planned): Application tracker.
-Phase 4 (planned): Job market intelligence via RSS feeds.
+Phase 2 (planned): Application tracker (SQLite backend)
+Phase 3 (planned): CV tailoring engine (auto-rewrite bullets to match JD)
+Phase 4 (planned): Automated job discovery agent (daily digest via email)
 
 ## Commands
 - `pip install -r requirements.txt` — install dependencies
@@ -32,9 +32,3 @@ Phase 4 (planned): Job market intelligence via RSS feeds.
 2. CV text (first user content block)
 
 The JD is the only uncached block. When the user compares the same CV against multiple JDs in a session, everything up to and including the CV is served from cache — reducing latency and input token cost on repeat calls.
-
-## Current phase status
-- [x] Phase 1: Fit scorer — COMPLETE
-- [ ] Phase 2: Cover letter generator
-- [ ] Phase 3: Application tracker (SQLite backend)
-- [ ] Phase 4: Market intelligence (RSS + trends)
