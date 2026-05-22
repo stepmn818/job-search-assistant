@@ -64,7 +64,19 @@ if analyse_btn:
 
         if result:
             st.divider()
-            st.subheader("📊 Fit Analysis")
+            st.subheader(
+                "📊 Fit Analysis",
+                help=(
+                    "**Scoring guide** (applies to Fit Score and each sub-score)\n\n"
+                    "- **85–100** — Near-perfect match\n"
+                    "- **70–84** — Strong match; gaps are minor\n"
+                    "- **50–69** — Partial match with 1–2 significant gaps\n"
+                    "- **30–49** — Weak match; missing key required items\n"
+                    "- **0–29** — Poor match; core requirements unmet\n\n"
+                    "**Fit Score** is a weighted rollup: "
+                    "`0.35·skills + 0.30·experience + 0.25·domain + 0.10·education`"
+                ),
+            )
 
             # Fit Score + sub-scores in one row
             score = result.get("fit_score", 0)
