@@ -1,5 +1,5 @@
 import streamlit as st
-from utils import analyze_fit
+from utils import analyze_fit, parse_uploaded_file
 
 st.set_page_config(
     page_title="AI Job Search Assistant",
@@ -10,26 +10,73 @@ st.set_page_config(
 st.title("🎯 AI Job Search Assistant")
 st.caption("Phase 1 — CV vs Job Description Fit Scorer")
 
-# --- Sidebar: CV Upload or Paste ---
+# Session-scoped CV library: {name: text}
+if "cv_library" not in st.session_state:
+    st.session_state.cv_library = {}
+if "active_cv_name" not in st.session_state:
+    st.session_state.active_cv_name = None
+
+# --- Sidebar: CV library + add new ---
 with st.sidebar:
     st.header("📄 Your CV")
-    cv_input_method = st.radio("How do you want to provide your CV?", ["Paste text", "Upload your CV"])
 
-    cv_text = ""
-    if cv_input_method == "Paste text":
-        cv_text = st.text_area("Paste your CV here", height=400, placeholder="Copy and paste the full text of your CV...")
-    else:
+    # Add a new CV
+    st.markdown("**Add a new CV**")
+    cv_input_method = st.radio(
+        "Input method",
+        ["Upload a file", "Paste text"],
+        horizontal=True,
+        label_visibility="collapsed",
+    )
+
+    if cv_input_method == "Upload a file":
         uploaded_file = st.file_uploader("Upload your CV", type=["txt", "pdf", "docx", "doc"])
-        if uploaded_file:
-            from utils import parse_uploaded_file
-            cv_text, err = parse_uploaded_file(uploaded_file)
+        if uploaded_file and uploaded_file.name not in st.session_state.cv_library:
+            text, err = parse_uploaded_file(uploaded_file)
             if err:
                 st.error(err)
-            else:
-                st.success("CV loaded ✅")
+            elif text:
+                st.session_state.cv_library[uploaded_file.name] = text
+                st.session_state.active_cv_name = uploaded_file.name
+                st.success(f"Added '{uploaded_file.name}' ✅")
+    else:
+        pasted = st.text_area(
+            "Paste your CV here",
+            height=250,
+            placeholder="Copy and paste the full text of your CV...",
+            key="paste_input",
+        )
+        paste_name = st.text_input("Save as", placeholder="e.g. data-scientist-cv")
+        if st.button("➕ Add to library", use_container_width=True, disabled=not pasted.strip()):
+            final_name = paste_name.strip() or f"Pasted CV {len(st.session_state.cv_library) + 1}"
+            st.session_state.cv_library[final_name] = pasted
+            st.session_state.active_cv_name = final_name
+            st.success(f"Added '{final_name}' ✅")
 
-    if cv_text:
-        st.info(f"CV loaded: {len(cv_text.split())} words")
+    # Library selector — drawn after inputs so newly-added CVs appear immediately
+    if st.session_state.cv_library:
+        st.divider()
+        st.markdown("**📚 Your uploaded CVs**")
+        names = list(st.session_state.cv_library.keys())
+        if st.session_state.active_cv_name not in names:
+            st.session_state.active_cv_name = names[0]
+        selected = st.selectbox(
+            "Active CV",
+            options=names,
+            index=names.index(st.session_state.active_cv_name),
+        )
+        st.session_state.active_cv_name = selected
+        active_text = st.session_state.cv_library[selected]
+        st.caption(f"{len(active_text.split())} words")
+        if st.button("🗑️ Remove from library", use_container_width=True):
+            del st.session_state.cv_library[selected]
+            st.session_state.active_cv_name = next(iter(st.session_state.cv_library), None)
+            st.rerun()
+
+# Active CV text for analysis
+cv_text = ""
+if st.session_state.active_cv_name and st.session_state.active_cv_name in st.session_state.cv_library:
+    cv_text = st.session_state.cv_library[st.session_state.active_cv_name]
 
 # --- Main area: JD Input ---
 st.subheader("📋 Job Description")
