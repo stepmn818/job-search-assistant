@@ -31,6 +31,13 @@ def _mock_claude_response(text: str) -> MagicMock:
 
 VALID_PAYLOAD = {
     "fit_score": 72,
+    "sub_scores": {
+        "skills": 75,
+        "experience": 80,
+        "domain": 65,
+        "education": 60,
+    },
+    "score_rationale": "Strong skills and experience offset by a weaker domain match.",
     "strengths": ["5 years Python experience", "People analytics background"],
     "gaps": ["No SQL certification listed"],
     "quick_wins": ["Add SQL projects to CV"],

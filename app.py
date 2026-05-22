@@ -66,13 +66,30 @@ if analyse_btn:
             st.divider()
             st.subheader("📊 Fit Analysis")
 
-            # Fit Score
-            score_col, spacer = st.columns([1, 3])
-            with score_col:
-                score = result.get("fit_score", 0)
-                color = "green" if score >= 70 else "orange" if score >= 50 else "red"
-                st.metric("Fit Score", f"{score} / 100")
+            # Fit Score + sub-scores in one row
+            score = result.get("fit_score", 0)
+            sub_scores = result.get("sub_scores", {})
+
+            fit_col, skills_col, exp_col, domain_col, edu_col = st.columns(5)
+            with fit_col:
+                st.markdown("##### Fit Score")
+                st.metric(label="Fit Score", value=f"{score} / 100", label_visibility="collapsed")
                 st.progress(score / 100)
+            for col, label, key in [
+                (skills_col, "Skills (35%)", "skills"),
+                (exp_col, "Experience (30%)", "experience"),
+                (domain_col, "Domain (25%)", "domain"),
+                (edu_col, "Education (10%)", "education"),
+            ]:
+                with col:
+                    value = sub_scores.get(key, 0)
+                    st.markdown(f"##### {label}")
+                    st.metric(label=label, value=f"{value} / 100", label_visibility="collapsed")
+                    st.progress(value / 100)
+
+            rationale = result.get("score_rationale", "")
+            if rationale:
+                st.caption(f"**Why this score:** {rationale}")
 
             st.divider()
 

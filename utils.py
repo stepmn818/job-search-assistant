@@ -13,30 +13,48 @@ Your job is to give an honest, calibrated assessment — not an encouraging one.
 Return ONLY valid JSON with this exact structure (no markdown, no extra text):
 {
   "fit_score": <integer 0-100>,
+  "sub_scores": {
+    "skills": <integer 0-100>,
+    "experience": <integer 0-100>,
+    "domain": <integer 0-100>,
+    "education": <integer 0-100>
+  },
+  "score_rationale": "<one sentence explaining why fit_score landed here, citing which sub-scores drove it>",
   "strengths": ["<strength>", ...],
   "gaps": ["<gap>", ...],
   "quick_wins": ["<actionable tip>", ...],
   "recruiter_summary": "<one sentence a recruiter would say about this candidate for this role>"
 }
 
+Sub-score dimensions:
+- skills: technical tools, languages, frameworks, methodologies the JD asks for vs. evidenced in the CV.
+- experience: years in role, seniority level, and similarity of past roles to the target role.
+- domain: industry/sector/business-context match (e.g., fintech, healthcare, B2B SaaS).
+- education: degrees, fields of study, and certifications named in the JD.
+
+Final score rollup — fit_score MUST equal the weighted average of sub_scores, rounded to the nearest integer:
+  fit_score = round(0.35*skills + 0.30*experience + 0.25*domain + 0.10*education)
+Do not adjust fit_score outside this formula. If you feel the rollup is wrong, fix the sub_scores, not the total.
+
 Rules:
 - strengths/gaps/quick_wins: list only real items — do not pad to reach a fixed count.
-- quick_wins: concrete CV or application changes, not generic advice.
+- quick_wins: concrete CV or application changes, i.e. actionable changes, not generic advice.
+- score_rationale: name the 1-2 sub-scores that most determined the result (e.g., "Strong skills and experience but weak domain match drags the total down").
 
-Scoring guide — be strict. Score based on evidence in the CV, not potential:
-- 85-100: Near-perfect match. Meets ALL required qualifications plus most preferred ones.
-- 70-84: Strong match. Meets all must-haves; gaps are minor or preferred-only.
-- 50-69: Partial match. Meets most must-haves but has 1-2 significant gaps.
-- 30-49: Weak match. Missing key required qualifications.
-- 0-29: Poor match. Core requirements are unmet.
+Scoring guide for each sub-score — be strict. Score based on evidence in the CV, not potential:
+- 85-100: Near-perfect match on this dimension.
+- 70-84: Strong match; gaps are minor.
+- 50-69: Partial match with 1-2 significant gaps.
+- 30-49: Weak match; missing key required items.
+- 0-29: Poor match; core requirements unmet.
 
-Weighting:
-- First, identify which qualifications are required vs. preferred. \
-If the JD does not distinguish, treat all listed qualifications as required.
-- Missing a required qualification (years of experience, specific tool, certification) \
-is a major penalty — drop one full band.
-- Missing a preferred/nice-to-have qualification is a minor deduction only.
-- Do not inflate the score to be encouraging. A 50 is an honest 50."""
+Weighting within each sub-score:
+- First, identify which items in that dimension are required vs. preferred. \
+If the JD does not distinguish, treat all listed items as required.
+- Missing a required item is a major penalty — drop one full band.
+- Missing a preferred/nice-to-have item is a minor deduction only.
+- If the JD says nothing about a dimension (e.g., no education requirement), score that dimension based on what is reasonable for the seniority and role — do not default to 100.
+- Do not inflate scores to be encouraging. A 50 is an honest 50."""
 
 
 def _get_secret(key: str) -> str:
