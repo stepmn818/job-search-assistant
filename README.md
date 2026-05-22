@@ -18,7 +18,8 @@ Manually comparing a CV to a JD is tedious, subjective, and easy to get wrong. Y
 
 Upload your CV and paste a job description. The tool analyses both and returns:
 
-- **Fit Score** — a calibrated 0–100 score reflecting overall alignment
+- **Fit Score** — a calibrated 0–100 score reflecting overall alignment, derived as a weighted rollup of four sub-scores (so the number is never a black box)
+- **Sub-Scores** — 0–100 each on Skills (35%), Experience (30%), Domain (25%), and Education (10%), with a one-sentence rationale explaining which dimensions drove the total
 - **Top Strengths** — where your experience directly matches what the role needs
 - **Skill Gaps** — what's missing or under-evidenced in your CV relative to the JD
 - **Quick Wins** — specific, actionable steps to improve your fit right now, whether that's a CV tweak, a certification, or a reframe

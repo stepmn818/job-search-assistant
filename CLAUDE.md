@@ -2,10 +2,10 @@
 
 ## What this project is
 An AI-powered job search assistant built with Streamlit + Anthropic Claude API.
-Phase 1: CV vs Job Description fit scorer.
-Phase 2 (planned): Application tracker (SQLite backend)
-Phase 3 (planned): CV tailoring engine (auto-rewrite bullets to match JD)
-Phase 4 (planned): Automated job discovery agent (daily digest via email)
+- Phase 1: CV vs Job Description fit scorer.
+- Phase 2 (planned): Application tracker (SQLite backend)
+- Phase 3 (planned): CV tailoring engine (auto-rewrite bullets to match JD)
+- Phase 4 (planned): Automated job discovery agent (daily digest via email)
 
 ## Commands
 - `pip install -r requirements.txt` — install dependencies
@@ -25,6 +25,16 @@ Phase 4 (planned): Automated job discovery agent (daily digest via email)
 - Claude responses are structured JSON — parse with `json.loads()` after stripping fences
 - Streamlit state: use `st.session_state` for any persistence between reruns
 - `utils.py` raises exceptions on error; `app.py` catches and displays them via `st.error`
+
+## Fit score schema
+`analyze_fit` returns a structured dict with these fields:
+- `fit_score` (0–100) — **derived**, not opinion. Computed as `round(0.35*skills + 0.30*experience + 0.25*domain + 0.10*education)`.
+- `sub_scores` — dict with `skills`, `experience`, `domain`, `education` (each 0–100).
+- `score_rationale` — one sentence naming the 1–2 sub-scores that drove the total.
+- `strengths`, `gaps`, `quick_wins` — lists of strings (variable length, no padding).
+- `recruiter_summary` — one sentence.
+
+Sub-score weights are fixed in `_SYSTEM_PROMPT` and surfaced in the UI labels (e.g. "Skills (35%)"). If you change them, update both places and the README.
 
 ## Prompt caching
 `analyze_fit` uses two `cache_control: ephemeral` breakpoints:
