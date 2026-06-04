@@ -28,13 +28,13 @@ An AI-powered job search assistant built with Streamlit + Anthropic Claude API.
 
 ## Fit score schema
 `analyze_fit` returns a structured dict with these fields:
-- `fit_score` (0–100) — **derived**, not opinion. Computed as `round(0.35*skills + 0.30*experience + 0.25*domain + 0.10*education)`.
-- `sub_scores` — dict with `skills`, `experience`, `domain`, `education` (each 0–100).
+- `fit_score` (0–100) — **derived in Python**, not emitted by the model. Computed inside `analyze_fit` as `round(0.35*skills + 0.30*experience + 0.25*domain + 0.10*education)` from the sub_scores the model returns. Removes both sampling noise on the total and "model did the arithmetic wrong" as a failure mode.
+- `sub_scores` — dict with `skills`, `experience`, `domain`, `education` (each 0–100). The model emits these directly.
 - `score_rationale` — one sentence naming the 1–2 sub-scores that drove the total.
 - `strengths`, `gaps`, `quick_wins` — lists of strings (variable length, no padding).
 - `recruiter_summary` — one sentence.
 
-Sub-score weights are fixed in `_SYSTEM_PROMPT` and surfaced in the UI labels (e.g. "Skills (35%)"). If you change them, update both places and the README.
+Sub-score weights live in the rollup expression inside `analyze_fit` and are surfaced in the UI labels (e.g. "Skills (35%)"). If you change them, update both places and the README.
 
 ## Prompt caching
 `analyze_fit` uses two `cache_control: ephemeral` breakpoints:

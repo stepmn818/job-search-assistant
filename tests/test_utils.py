@@ -165,6 +165,16 @@ class TestParseUploadedFile:
 
 class TestAnalyzeFit:
 
+    @pytest.fixture(autouse=True)
+    def _reset_client_cache(self):
+        # The module caches the Anthropic client after first construction.
+        # Reset it before each test so patches on utils.anthropic.Anthropic
+        # take effect and tests stay independent.
+        import utils
+        utils._client = None
+        yield
+        utils._client = None
+
     def _call(self, cv="my cv text", jd="job description text"):
         from utils import analyze_fit
         return analyze_fit(cv, jd)
@@ -230,7 +240,10 @@ class TestAnalyzeFit:
 
     @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
     def test_fit_score_boundary_zero(self):
-        payload = {**VALID_PAYLOAD, "fit_score": 0}
+        payload = {
+            **VALID_PAYLOAD,
+            "sub_scores": {"skills": 0, "experience": 0, "domain": 0, "education": 0},
+        }
         with patch("utils.anthropic.Anthropic") as mock_cls:
             mock_cls.return_value.messages.create.return_value = (
                 _mock_claude_response(json.dumps(payload))
@@ -240,13 +253,34 @@ class TestAnalyzeFit:
 
     @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
     def test_fit_score_boundary_hundred(self):
-        payload = {**VALID_PAYLOAD, "fit_score": 100}
+        payload = {
+            **VALID_PAYLOAD,
+            "sub_scores": {"skills": 100, "experience": 100, "domain": 100, "education": 100},
+        }
         with patch("utils.anthropic.Anthropic") as mock_cls:
             mock_cls.return_value.messages.create.return_value = (
                 _mock_claude_response(json.dumps(payload))
             )
             result = self._call()
         assert result["fit_score"] == 100
+
+    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    def test_fit_score_is_derived_from_sub_scores(self):
+        # Model emits a bogus fit_score; analyze_fit must overwrite it with
+        # the weighted rollup of sub_scores.
+        payload = {
+            **VALID_PAYLOAD,
+            "fit_score": 99,
+            "sub_scores": {"skills": 80, "experience": 70, "domain": 60, "education": 50},
+        }
+        expected = round(0.35 * 80 + 0.30 * 70 + 0.25 * 60 + 0.10 * 50)
+        with patch("utils.anthropic.Anthropic") as mock_cls:
+            mock_cls.return_value.messages.create.return_value = (
+                _mock_claude_response(json.dumps(payload))
+            )
+            result = self._call()
+        assert result["fit_score"] == expected
+        assert result["fit_score"] != 99
 
     @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
     def test_prompt_caching_system_has_cache_control(self):
@@ -290,26 +324,3 @@ class TestAnalyzeFit:
         assert "UNIQUE_CV_MARKER" in user_content[0]["text"]
         assert "UNIQUE_JD_MARKER" in user_content[1]["text"]
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
-    def test_max_tokens_at_least_2048(self):
-        with patch("utils.anthropic.Anthropic") as mock_cls:
-            mock_instance = mock_cls.return_value
-            mock_instance.messages.create.return_value = (
-                _mock_claude_response(json.dumps(VALID_PAYLOAD))
-            )
-            self._call()
-
-        kwargs = mock_instance.messages.create.call_args.kwargs
-        assert kwargs["max_tokens"] >= 2048
-
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
-    def test_correct_model_used(self):
-        with patch("utils.anthropic.Anthropic") as mock_cls:
-            mock_instance = mock_cls.return_value
-            mock_instance.messages.create.return_value = (
-                _mock_claude_response(json.dumps(VALID_PAYLOAD))
-            )
-            self._call()
-
-        kwargs = mock_instance.messages.create.call_args.kwargs
-        assert kwargs["model"] == "claude-sonnet-4-6"

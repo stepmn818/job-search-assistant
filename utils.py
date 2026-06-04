@@ -12,14 +12,13 @@ Your job is to give an honest, calibrated assessment — not an encouraging one.
 
 Return ONLY valid JSON with this exact structure (no markdown, no extra text):
 {
-  "fit_score": <integer 0-100>,
   "sub_scores": {
     "skills": <integer 0-100>,
     "experience": <integer 0-100>,
     "domain": <integer 0-100>,
     "education": <integer 0-100>
   },
-  "score_rationale": "<one sentence explaining why fit_score landed here, citing which sub-scores drove it>",
+  "score_rationale": "<one sentence naming the 1-2 sub-scores that most determined the overall fit>",
   "strengths": ["<strength>", ...],
   "gaps": ["<gap>", ...],
   "quick_wins": ["<actionable tip>", ...],
@@ -32,9 +31,7 @@ Sub-score dimensions:
 - domain: industry/sector/business-context match (e.g., fintech, healthcare, B2B SaaS).
 - education: degrees, fields of study, and certifications named in the JD.
 
-Final score rollup — fit_score MUST equal the weighted average of sub_scores, rounded to the nearest integer:
-  fit_score = round(0.35*skills + 0.30*experience + 0.25*domain + 0.10*education)
-Do not adjust fit_score outside this formula. If you feel the rollup is wrong, fix the sub_scores, not the total.
+Score each sub-score independently. The overall fit score is computed downstream as a weighted rollup of these four sub-scores, so put your effort into calibrating each one accurately — do not try to reverse-engineer a target total.
 
 Rules:
 - strengths/gaps/quick_wins: list only real items — do not pad to reach a fixed count.
@@ -62,6 +59,25 @@ def _get_secret(key: str) -> str:
         return st.secrets.get(key, "")
     except Exception:
         return ""
+
+
+# Lazy module-level client so we pay the key lookup + SDK construction once
+# per process (and reuse the SDK's httpx connection pool across calls).
+_client: anthropic.Anthropic | None = None
+
+
+def _get_client() -> anthropic.Anthropic:
+    global _client
+    if _client is not None:
+        return _client
+    api_key = os.environ.get("ANTHROPIC_API_KEY") or _get_secret("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise RuntimeError(
+            "ANTHROPIC_API_KEY not found. "
+            "Add it to your .env file or Streamlit secrets."
+        )
+    _client = anthropic.Anthropic(api_key=api_key)
+    return _client
 
 
 def parse_uploaded_file(uploaded_file) -> tuple[str, str]:
@@ -100,20 +116,14 @@ def analyze_fit(cv_text: str, jd_text: str) -> dict:
     Raises RuntimeError on API/key errors, ValueError on unparseable response.
     """
 
-    api_key = os.environ.get("ANTHROPIC_API_KEY") or _get_secret("ANTHROPIC_API_KEY")
-
-    if not api_key:
-        raise RuntimeError(
-            "ANTHROPIC_API_KEY not found. "
-            "Add it to your .env file or Streamlit secrets."
-        )
-
-    client = anthropic.Anthropic(api_key=api_key)
+    client = _get_client()
 
     try:
         message = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=2048,
+            # model="claude-sonnet-4-6",
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1024,
+            temperature=0.5,
             system=[
                 {
                     "type": "text",
@@ -144,6 +154,17 @@ def analyze_fit(cv_text: str, jd_text: str) -> dict:
         # Strip markdown code fences if present
         clean = re.sub(r"^```(?:json)?|```$", "", raw, flags=re.MULTILINE).strip()
         result = json.loads(clean)
+
+        # fit_score is derived, not opinion — compute it from the sub_scores
+        # the model emitted so the rollup is always exact.
+        s = result["sub_scores"]
+        result["fit_score"] = round(
+            0.35 * s["skills"]
+            + 0.30 * s["experience"]
+            + 0.25 * s["domain"]
+            + 0.10 * s["education"]
+        )
+
         result["full_response"] = raw
         return result
 
