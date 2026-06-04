@@ -19,7 +19,7 @@ An AI-powered job search assistant built with Streamlit + Anthropic Claude API.
 - `.env` / `.streamlit/secrets.toml` — API key (never commit these)
 
 ## Key conventions
-- Claude model: always use `claude-sonnet-4-6`
+- Claude model: always use `claude-haiku-4-5-20251001`
 - All Claude API calls live in `utils.py`, never in `app.py`
 - API key loaded from env var `ANTHROPIC_API_KEY`
 - Claude responses are structured JSON — parse with `json.loads()` after stripping fences

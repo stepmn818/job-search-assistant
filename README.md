@@ -34,7 +34,7 @@ The goal isn't to game the application process. It's to help candidates make sma
 | Layer | Technology |
 |---|---|
 | UI | [Streamlit](https://streamlit.io) |
-| AI | [Anthropic Claude API](https://www.anthropic.com) — `claude-sonnet-4-6` |
+| AI | [Anthropic Claude API](https://www.anthropic.com) — `claude-haiku-4-5-20251001` |
 | File parsing | `pypdf`, `python-docx` |
 | Language | Python 3.10+ |
 | Dev tooling | [Claude Code CLI](https://claude.ai/code) |
