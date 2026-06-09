@@ -9,22 +9,22 @@ An AI-powered job search assistant built with Streamlit + Anthropic Claude API.
 
 ## Commands
 - `pip install -r requirements.txt` — install dependencies
-- `streamlit run app.py` — start the app (runs on http://localhost:8501)
+- `streamlit run CV_Fit_Scorer.py` — start the app (runs on http://localhost:8501)
 - `pytest tests/` — run the test suite
 
 ## Architecture
-- `app.py` — Streamlit UI, all page layout and user interaction
+- `CV_Fit_Scorer.py` — Streamlit UI for the fit scorer (also the entry script; its filename is the sidebar label)
 - `utils.py` — Claude API calls, prompt logic, JSON parsing
 - `tests/test_utils.py` — unit tests for utils.py (pytest + unittest.mock)
 - `.env` / `.streamlit/secrets.toml` — API key (never commit these)
 
 ## Key conventions
 - Claude model: always use `claude-haiku-4-5-20251001`
-- All Claude API calls live in `utils.py`, never in `app.py`
+- All Claude API calls live in `utils.py`, never in `CV_Fit_Scorer.py`
 - API key loaded from env var `ANTHROPIC_API_KEY`
 - Claude responses are structured JSON — parse with `json.loads()` after stripping fences
 - Streamlit state: use `st.session_state` for any persistence between reruns
-- `utils.py` raises exceptions on error; `app.py` catches and displays them via `st.error`
+- `utils.py` raises exceptions on error; `CV_Fit_Scorer.py` catches and displays them via `st.error`
 
 ## Fit score schema
 `analyze_fit` returns a structured dict with these fields:

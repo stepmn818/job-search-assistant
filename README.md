@@ -53,7 +53,7 @@ pip install -r requirements.txt
 echo "ANTHROPIC_API_KEY=your-key-here" > .env
 
 # 3. Start the app
-streamlit run app.py
+streamlit run CV_Fit_Scorer.py
 ```
 
 Open [http://localhost:8501](http://localhost:8501)
