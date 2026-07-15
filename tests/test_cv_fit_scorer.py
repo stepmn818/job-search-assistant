@@ -105,6 +105,49 @@ class TestCvLibrary:
         assert at.warning == []
 
 
+class TestFileUpload:
+    def test_upload_txt_adds_cv_to_library_and_selects_it(self, isolated_db):
+        at = AppTest.from_file("CV_Fit_Scorer.py")
+        _run(at)
+        # Default radio value is already "Upload a file".
+        at.sidebar.file_uploader[0].set_value(
+            ("cv.txt", b"Experienced backend engineer with 5 years of Python.", "text/plain")
+        )
+        _run(at)
+
+        assert "cv.txt" in at.session_state.cv_library
+        assert at.session_state.active_cv_name == "cv.txt"
+        assert any("Added" in s.value for s in at.success)
+
+    def test_upload_error_shown_for_unparseable_pdf(self, isolated_db):
+        at = AppTest.from_file("CV_Fit_Scorer.py")
+        _run(at)
+        at.sidebar.file_uploader[0].set_value(("cv.pdf", b"not a real pdf", "application/pdf"))
+        _run(at)
+
+        assert any("Could not read PDF" in e.value for e in at.error)
+        assert at.session_state.cv_library == {}
+        assert at.session_state.active_cv_name is None
+
+    def test_unrelated_rerun_after_upload_does_not_duplicate_or_error(self, isolated_db):
+        # The file_uploader widget keeps returning the same file on every
+        # subsequent rerun (not just the one where it was set) — an unrelated
+        # interaction elsewhere on the page must not re-trigger the add path
+        # in a way that duplicates the entry or raises.
+        at = AppTest.from_file("CV_Fit_Scorer.py")
+        _run(at)
+        at.sidebar.file_uploader[0].set_value(
+            ("cv.txt", b"Experienced backend engineer with 5 years of Python.", "text/plain")
+        )
+        _run(at)
+
+        at.text_area[0].set_value("Some unrelated job description text.")
+        _run(at)
+
+        assert list(at.session_state.cv_library.keys()) == ["cv.txt"]
+        assert at.exception == []
+
+
 class TestAnalyseFit:
     def test_error_when_analysing_without_cv(self, isolated_db):
         at = AppTest.from_file("CV_Fit_Scorer.py")
