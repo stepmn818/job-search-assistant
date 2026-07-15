@@ -48,6 +48,21 @@ The goal isn't to game the application process. It's to help candidates make sma
 
 **Prerequisites:** Python 3.14+, an Anthropic API key ([console.anthropic.com](https://console.anthropic.com))
 
+**Recommended — with [uv](https://docs.astral.sh/uv/):**
+
+```bash
+# 1. Install dependencies into a managed virtualenv, from the uv.lock lockfile
+uv sync
+
+# 2. Add your API key — create a .env file in the project root
+echo "ANTHROPIC_API_KEY=your-key-here" > .env
+
+# 3. Start the app
+uv run streamlit run CV_Fit_Scorer.py
+```
+
+**Without uv, using plain pip:**
+
 ```bash
 # 1. Install dependencies
 pip install -r requirements.txt

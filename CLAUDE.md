@@ -11,8 +11,8 @@ An AI-powered job search assistant built with Streamlit + Anthropic Claude API.
 - Python 3.14+ (see `pyproject.toml`'s `requires-python`)
 
 ## Commands
-- `pip install -r requirements.txt` — install dependencies (or `uv sync` — this repo also has a `uv.lock`)
-- `python -m streamlit run CV_Fit_Scorer.py` — start the app (runs on http://localhost:8501)
+- `uv sync` — install dependencies from `uv.lock` (recommended; falls back to `pip install -r requirements.txt` if `uv` isn't available — keep that file's version floors in sync with `pyproject.toml` by hand if you do)
+- `python -m streamlit run CV_Fit_Scorer.py` — start the app (runs on http://localhost:8501; use `uv run streamlit run CV_Fit_Scorer.py` if using uv)
 - `pytest tests/` — run the test suite
 
 ## Architecture
