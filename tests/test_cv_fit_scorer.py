@@ -147,6 +147,27 @@ class TestFileUpload:
         assert list(at.session_state.cv_library.keys()) == ["cv.txt"]
         assert at.exception == []
 
+    def test_removing_uploaded_cv_does_not_silently_reappear(self, isolated_db):
+        # Regression test: the file_uploader widget keeps returning the same
+        # UploadedFile after the entry is deleted from cv_library, so the
+        # add-guard must key off the upload's file_id (not "name not in
+        # library") or the removal gets silently undone on the very next
+        # rerun triggered by st.rerun().
+        at = AppTest.from_file("CV_Fit_Scorer.py")
+        _run(at)
+        at.sidebar.file_uploader[0].set_value(
+            ("cv.txt", b"Experienced backend engineer with 5 years of Python.", "text/plain")
+        )
+        _run(at)
+        assert "cv.txt" in at.session_state.cv_library
+
+        remove_btn = next(b for b in at.sidebar.button if "Remove" in b.label)
+        remove_btn.click()
+        _run(at)
+
+        assert at.session_state.cv_library == {}
+        assert at.session_state.active_cv_name is None
+
 
 class TestAnalyseFit:
     def test_error_when_analysing_without_cv(self, isolated_db):

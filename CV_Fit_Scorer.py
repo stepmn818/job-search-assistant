@@ -19,6 +19,12 @@ if "cv_library" not in st.session_state:
     st.session_state.cv_library = {}
 if "active_cv_name" not in st.session_state:
     st.session_state.active_cv_name = None
+# The file_uploader widget keeps returning the same UploadedFile across every
+# rerun (not just the one where it was picked) — track which upload we've
+# already processed by its file_id so removing it from the library sticks
+# instead of being immediately re-added on the next rerun.
+if "last_processed_upload_id" not in st.session_state:
+    st.session_state.last_processed_upload_id = None
 
 # Persist the most recent analysis across reruns so the Save-to-tracker form
 # can survive Streamlit's rerun-on-every-interaction model.
@@ -46,7 +52,8 @@ with st.sidebar:
 
     if cv_input_method == "Upload a file":
         uploaded_file = st.file_uploader("Upload your CV", type=["txt", "pdf", "docx", "doc"])
-        if uploaded_file and uploaded_file.name not in st.session_state.cv_library:
+        if uploaded_file and uploaded_file.file_id != st.session_state.last_processed_upload_id:
+            st.session_state.last_processed_upload_id = uploaded_file.file_id
             text, err = parse_uploaded_file(uploaded_file)
             if err:
                 st.error(err)
