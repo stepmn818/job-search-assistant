@@ -16,7 +16,7 @@ Manually comparing a CV to a JD is tedious, subjective, and easy to get wrong. Y
 
 ## What This Tool Does
 
-Upload your CV and paste a job description. The tool analyses both and returns:
+Upload or paste your CV and paste a job description. The tool analyses both and returns:
 
 - **Fit Score** — a calibrated 0–100 score reflecting overall alignment, derived as a weighted rollup of four sub-scores (so the number is never a black box)
 - **Sub-Scores** — 0–100 each on Skills (35%), Experience (30%), Domain (25%), and Education (10%), with a one-sentence rationale explaining which dimensions drove the total
@@ -24,6 +24,8 @@ Upload your CV and paste a job description. The tool analyses both and returns:
 - **Skill Gaps** — what's missing or under-evidenced in your CV relative to the JD
 - **Quick Wins** — specific, actionable steps to improve your fit right now, whether that's a CV tweak, a certification, or a reframe
 - **One-Line Recruiter Summary** — how a recruiter reading your CV would likely position you for this role
+
+From there, save the analysis straight to the **Application Tracker** (a second page in the app's sidebar nav) to log the company, role, and fit score, then track status through Considering → Applied → Interview → Offer/Rejected as your search progresses.
 
 The goal isn't to game the application process. It's to help candidates make smarter decisions about where to focus their energy — and show up better prepared when they do apply.
 
@@ -35,15 +37,16 @@ The goal isn't to game the application process. It's to help candidates make sma
 |---|---|
 | UI | [Streamlit](https://streamlit.io) |
 | AI | [Anthropic Claude API](https://www.anthropic.com) — `claude-haiku-4-5-20251001` |
+| Persistence | SQLite (`database.py`), rendered with `pandas` |
 | File parsing | `pypdf`, `python-docx` |
-| Language | Python 3.10+ |
+| Language | Python 3.14+ |
 | Dev tooling | [Claude Code CLI](https://claude.ai/code) |
 
 ---
 
 ## How to Run
 
-**Prerequisites:** Python 3.10+, an Anthropic API key ([console.anthropic.com](https://console.anthropic.com))
+**Prerequisites:** Python 3.14+, an Anthropic API key ([console.anthropic.com](https://console.anthropic.com))
 
 ```bash
 # 1. Install dependencies
@@ -53,7 +56,7 @@ pip install -r requirements.txt
 echo "ANTHROPIC_API_KEY=your-key-here" > .env
 
 # 3. Start the app
-streamlit run CV_Fit_Scorer.py
+python -m streamlit run CV_Fit_Scorer.py
 ```
 
 Open [http://localhost:8501](http://localhost:8501)
@@ -65,8 +68,8 @@ Open [http://localhost:8501](http://localhost:8501)
 | Phase | Feature | Status |
 |-------|---------|--------|
 | 1 | CV vs JD fit scorer | ✅ Done |
-| 2 | Application tracker (SQLite) | 🔜 Next |
-| 3 | CV tailoring engine (auto-rewrite bullets to match JD) | 📋 Planned |
+| 2 | Application tracker (SQLite) | ✅ Done |
+| 3 | CV tailoring engine (auto-rewrite bullets to match JD) | 🔜 Next |
 | 4 | Automated job discovery agent (daily digest via email) | 📋 Planned |
 
 ---
