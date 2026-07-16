@@ -25,6 +25,18 @@ SAMPLE_ANALYSIS = {
     "full_response": "{}",
 }
 
+SAMPLE_TAILORING = {
+    "summary": "Reworded one bullet to surface AWS, which the JD requires.",
+    "tailored_bullets": [
+        {
+            "original": "Maintained backend services in Python.",
+            "rewritten": "Maintained backend services in Python, deployed on AWS.",
+            "reason": "Surfaces AWS, required by the JD.",
+        },
+    ],
+    "full_response": "{}",
+}
+
 
 @pytest.fixture
 def isolated_db(tmp_path, monkeypatch):
@@ -271,3 +283,59 @@ class TestSaveToTracker:
         _run(at)
         save_btn = next(b for b in at.button if "Save to tracker" in b.label)
         assert save_btn.disabled  # role still empty
+
+
+class TestTailorCvButton:
+    @patch("utils.analyze_fit")
+    def test_tailor_button_appears_after_analysis(self, mock_analyze, isolated_db):
+        mock_analyze.return_value = dict(SAMPLE_ANALYSIS)
+
+        at = AppTest.from_file("CV_Fit_Scorer.py")
+        _run(at)
+        _add_cv_via_paste(at)
+        _add_jd(at)
+        next(b for b in at.button if "Analyse" in b.label).click()
+        _run(at)
+
+        assert any("Tailor my CV" in b.label for b in at.button)
+
+    @patch("utils.tailor_cv")
+    @patch("utils.analyze_fit")
+    def test_tailor_button_calls_tailor_cv_and_stores_result(self, mock_analyze, mock_tailor, isolated_db):
+        mock_analyze.return_value = dict(SAMPLE_ANALYSIS)
+        mock_tailor.return_value = dict(SAMPLE_TAILORING)
+
+        at = AppTest.from_file("CV_Fit_Scorer.py")
+        _run(at)
+        _add_cv_via_paste(at)
+        _add_jd(at)
+        next(b for b in at.button if "Analyse" in b.label).click()
+        _run(at)
+
+        tailor_btn = next(b for b in at.button if "Tailor my CV" in b.label)
+        tailor_btn.click()
+        _run(at)
+
+        mock_tailor.assert_called_once()
+        assert at.session_state.tailor_result == SAMPLE_TAILORING
+        assert at.session_state.tailor_cv_name == "Test CV"
+        assert at.exception == []
+
+    @patch("utils.tailor_cv")
+    @patch("utils.analyze_fit")
+    def test_tailor_error_is_shown(self, mock_analyze, mock_tailor, isolated_db):
+        mock_analyze.return_value = dict(SAMPLE_ANALYSIS)
+        mock_tailor.side_effect = RuntimeError("Anthropic API error: boom")
+
+        at = AppTest.from_file("CV_Fit_Scorer.py")
+        _run(at)
+        _add_cv_via_paste(at)
+        _add_jd(at)
+        next(b for b in at.button if "Analyse" in b.label).click()
+        _run(at)
+
+        tailor_btn = next(b for b in at.button if "Tailor my CV" in b.label)
+        tailor_btn.click()
+        _run(at)
+
+        assert any("boom" in e.value for e in at.error)

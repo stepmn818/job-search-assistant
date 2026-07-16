@@ -1,7 +1,7 @@
 import streamlit as st
 
 import database
-from utils import analyze_fit, parse_uploaded_file
+from utils import analyze_fit, parse_uploaded_file, tailor_cv
 
 st.set_page_config(
     page_title="AI Job Search Assistant",
@@ -33,6 +33,9 @@ for key, default in [
     ("analysis_jd", ""),
     ("analysis_cv_name", None),
     ("saved_app_id", None),
+    ("tailor_result", None),
+    ("tailor_cv_name", None),
+    ("tailor_jd", ""),
 ]:
     if key not in st.session_state:
         st.session_state[key] = default
@@ -206,6 +209,27 @@ if result:
     # Recruiter summary
     st.markdown("### 🧑‍💼 One-Line Recruiter Summary")
     st.info(result.get("recruiter_summary", ""))
+
+    # --- Tailor CV ---
+    st.divider()
+    st.markdown("### ✏️ Tailor my CV")
+    st.caption(
+        "Rewrite CV bullets to better match this job description, using only "
+        "what's already evidenced on your CV — no invented experience."
+    )
+    if st.button("✏️ Tailor my CV", type="secondary"):
+        try:
+            with st.spinner("Tailoring your CV with Claude..."):
+                source_cv = st.session_state.cv_library.get(
+                    st.session_state.analysis_cv_name, ""
+                )
+                tailoring = tailor_cv(source_cv, st.session_state.analysis_jd)
+            st.session_state.tailor_result = tailoring
+            st.session_state.tailor_cv_name = st.session_state.analysis_cv_name
+            st.session_state.tailor_jd = st.session_state.analysis_jd
+            st.switch_page("pages/CV_Tailor.py")
+        except Exception as e:
+            st.error(str(e))
 
     # --- Save to tracker ---
     st.divider()

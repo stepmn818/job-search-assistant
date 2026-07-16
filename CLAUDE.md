@@ -4,7 +4,8 @@
 An AI-powered job search assistant built with Streamlit + Anthropic Claude API.
 - Phase 1: CV vs Job Description fit scorer. Done.
 - Phase 2: Application tracker (SQLite backend). Done.
-- Phase 3 (planned): CV tailoring engine (auto-rewrite bullets to match JD)
+- Phase 3: CV tailoring engine (per-bullet rewrite pass, session-only). Done.
+- Phase 3b (planned): Persist tailored CVs to the tracker DB (currently session-only, see "CV tailoring schema" below)
 - Phase 4 (planned): Automated job discovery agent (daily digest via email)
 
 ## Requirements
@@ -18,6 +19,7 @@ An AI-powered job search assistant built with Streamlit + Anthropic Claude API.
 ## Architecture
 - `CV_Fit_Scorer.py` — Streamlit UI for the fit scorer (also the entry script; its filename is the sidebar label)
 - `pages/Application_Tracker.py` — Streamlit multi-page UI for the application tracker (read-only table + edit form)
+- `pages/CV_Tailor.py` — Streamlit multi-page UI showing the per-bullet tailoring diff; reads `st.session_state.tailor_result`, set by the "✏️ Tailor my CV" button on `CV_Fit_Scorer.py` via `st.switch_page`
 - `utils.py` — Claude API calls, prompt logic, JSON parsing
 - `database.py` — SQLite persistence for saved applications
 - `job_search.db` — SQLite file created at runtime by `database.init_db()`; gitignored, never commit it
@@ -25,6 +27,7 @@ An AI-powered job search assistant built with Streamlit + Anthropic Claude API.
 - `tests/test_database.py` — unit tests for database.py
 - `tests/test_cv_fit_scorer.py` — Streamlit `AppTest` tests for the fit scorer page
 - `tests/test_application_tracker.py` — Streamlit `AppTest` tests for the tracker page
+- `tests/test_cv_tailor.py` — Streamlit `AppTest` tests for the CV tailor page
 - `.env` / `.streamlit/secrets.toml` — API key (never commit these)
 
 ## Key conventions
@@ -53,3 +56,12 @@ Sub-score weights live in the rollup expression inside `analyze_fit` and are sur
 2. CV text (first user content block)
 
 The JD is the only uncached block. When the user compares the same CV against multiple JDs in a session, everything up to and including the CV is served from cache — reducing latency and input token cost on repeat calls.
+
+## CV tailoring schema
+`tailor_cv(cv_text, jd_text)` mirrors `analyze_fit`'s shape (same client, same two cache breakpoints, same fence-stripping/error-handling), returning:
+- `summary` — one sentence describing the tailoring approach (or, if no bullets changed, why not).
+- `tailored_bullets` — list of `{original, rewritten, reason}`. `original` must be copied verbatim from the CV so the UI can pair it with its source; variable length, no padding, empty list is valid.
+
+Tailoring is explicitly constrained to rewording — the system prompt forbids inventing skills, tools, employers, or metrics not already evidenced in the CV.
+
+Output is **session-only**: the result lives in `st.session_state.tailor_result` (plus `tailor_cv_name` / `tailor_jd`), set on `CV_Fit_Scorer.py` and read on `pages/CV_Tailor.py`. Nothing is persisted to `job_search.db` — if DB persistence is added later, it needs a schema migration (new column on `applications`) and a write path through `database.py`, matching the funnel convention above.

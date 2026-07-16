@@ -44,6 +44,17 @@ VALID_PAYLOAD = {
     "recruiter_summary": "Strong analytical profile with one minor gap.",
 }
 
+VALID_TAILOR_PAYLOAD = {
+    "summary": "Reworded two bullets to surface Python and SQL keywords from the JD.",
+    "tailored_bullets": [
+        {
+            "original": "Built internal reporting tools for the analytics team.",
+            "rewritten": "Built internal reporting tools in Python and SQL for the analytics team.",
+            "reason": "Surfaces Python/SQL, both required by the JD.",
+        },
+    ],
+}
+
 
 # ── parse_uploaded_file ───────────────────────────────────────────────────────
 
@@ -316,6 +327,129 @@ class TestAnalyzeFit:
             mock_instance = mock_cls.return_value
             mock_instance.messages.create.return_value = (
                 _mock_claude_response(json.dumps(VALID_PAYLOAD))
+            )
+            self._call(cv="UNIQUE_CV_MARKER", jd="UNIQUE_JD_MARKER")
+
+        kwargs = mock_instance.messages.create.call_args.kwargs
+        user_content = kwargs["messages"][0]["content"]
+        assert "UNIQUE_CV_MARKER" in user_content[0]["text"]
+        assert "UNIQUE_JD_MARKER" in user_content[1]["text"]
+
+
+# ── tailor_cv ─────────────────────────────────────────────────────────────────
+
+class TestTailorCv:
+
+    @pytest.fixture(autouse=True)
+    def _reset_client_cache(self):
+        import utils
+        utils._client = None
+        yield
+        utils._client = None
+
+    def _call(self, cv="my cv text", jd="job description text"):
+        from utils import tailor_cv
+        return tailor_cv(cv, jd)
+
+    def test_missing_api_key_raises_runtime_error(self):
+        with patch.dict(os.environ, {}, clear=True):
+            with patch("utils._get_secret", return_value=""):
+                with pytest.raises(RuntimeError, match="ANTHROPIC_API_KEY"):
+                    self._call()
+
+    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    def test_valid_response_returns_all_fields(self):
+        with patch("utils.anthropic.Anthropic") as mock_cls:
+            mock_cls.return_value.messages.create.return_value = (
+                _mock_claude_response(json.dumps(VALID_TAILOR_PAYLOAD))
+            )
+            result = self._call()
+
+        assert result["summary"] == VALID_TAILOR_PAYLOAD["summary"]
+        assert result["tailored_bullets"] == VALID_TAILOR_PAYLOAD["tailored_bullets"]
+        assert "full_response" in result
+
+    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    def test_json_backtick_fences_stripped(self):
+        fenced = f"```json\n{json.dumps(VALID_TAILOR_PAYLOAD)}\n```"
+        with patch("utils.anthropic.Anthropic") as mock_cls:
+            mock_cls.return_value.messages.create.return_value = (
+                _mock_claude_response(fenced)
+            )
+            result = self._call()
+        assert result["summary"] == VALID_TAILOR_PAYLOAD["summary"]
+
+    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    def test_bare_fences_stripped(self):
+        fenced = f"```\n{json.dumps(VALID_TAILOR_PAYLOAD)}\n```"
+        with patch("utils.anthropic.Anthropic") as mock_cls:
+            mock_cls.return_value.messages.create.return_value = (
+                _mock_claude_response(fenced)
+            )
+            result = self._call()
+        assert result["summary"] == VALID_TAILOR_PAYLOAD["summary"]
+
+    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    def test_invalid_json_raises_value_error(self):
+        with patch("utils.anthropic.Anthropic") as mock_cls:
+            mock_cls.return_value.messages.create.return_value = (
+                _mock_claude_response("Sorry, I cannot tailor this.")
+            )
+            with pytest.raises(ValueError, match="JSON"):
+                self._call()
+
+    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    def test_api_error_raises_runtime_error(self):
+        with patch("utils.anthropic.Anthropic") as mock_cls:
+            mock_cls.return_value.messages.create.side_effect = (
+                anthropic_lib.APIConnectionError(request=MagicMock())
+            )
+            with pytest.raises(RuntimeError, match="API error"):
+                self._call()
+
+    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    def test_empty_bullets_list_is_valid(self):
+        payload = {"summary": "No changes needed — the CV already matches the JD.", "tailored_bullets": []}
+        with patch("utils.anthropic.Anthropic") as mock_cls:
+            mock_cls.return_value.messages.create.return_value = (
+                _mock_claude_response(json.dumps(payload))
+            )
+            result = self._call()
+        assert result["tailored_bullets"] == []
+
+    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    def test_prompt_caching_system_has_cache_control(self):
+        with patch("utils.anthropic.Anthropic") as mock_cls:
+            mock_instance = mock_cls.return_value
+            mock_instance.messages.create.return_value = (
+                _mock_claude_response(json.dumps(VALID_TAILOR_PAYLOAD))
+            )
+            self._call()
+
+        kwargs = mock_instance.messages.create.call_args.kwargs
+        assert isinstance(kwargs["system"], list)
+        assert kwargs["system"][0]["cache_control"] == {"type": "ephemeral"}
+
+    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    def test_prompt_caching_cv_block_has_cache_control(self):
+        with patch("utils.anthropic.Anthropic") as mock_cls:
+            mock_instance = mock_cls.return_value
+            mock_instance.messages.create.return_value = (
+                _mock_claude_response(json.dumps(VALID_TAILOR_PAYLOAD))
+            )
+            self._call(cv="my cv", jd="the jd")
+
+        kwargs = mock_instance.messages.create.call_args.kwargs
+        user_content = kwargs["messages"][0]["content"]
+        assert user_content[0]["cache_control"] == {"type": "ephemeral"}
+        assert "cache_control" not in user_content[1]
+
+    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    def test_cv_and_jd_text_passed_to_api(self):
+        with patch("utils.anthropic.Anthropic") as mock_cls:
+            mock_instance = mock_cls.return_value
+            mock_instance.messages.create.return_value = (
+                _mock_claude_response(json.dumps(VALID_TAILOR_PAYLOAD))
             )
             self._call(cv="UNIQUE_CV_MARKER", jd="UNIQUE_JD_MARKER")
 

@@ -27,6 +27,8 @@ Upload or paste your CV and paste a job description. The tool analyses both and 
 
 From there, save the analysis straight to the **Application Tracker** (a second page in the app's sidebar nav) to log the company, role, and fit score, then track status through Considering → Applied → Interview → Offer/Rejected as your search progresses.
 
+Once you have an analysis, click **✏️ Tailor my CV** to get a per-bullet rewrite pass: for each CV bullet worth improving, the **CV Tailor** page shows the original next to a version reworded with the JD's own language, plus a one-line reason for the change. Tailoring only rewords what's already true on your CV — it never invents skills, tools, or experience you don't have.
+
 The goal isn't to game the application process. It's to help candidates make smarter decisions about where to focus their energy — and show up better prepared when they do apply.
 
 ---
@@ -84,8 +86,9 @@ Open [http://localhost:8501](http://localhost:8501)
 |-------|---------|--------|
 | 1 | CV vs JD fit scorer | ✅ Done |
 | 2 | Application tracker (SQLite) | ✅ Done |
-| 3 | CV tailoring engine (auto-rewrite bullets to match JD) | 🔜 Next |
-| 4 | Automated job discovery agent (daily digest via email) | 📋 Planned |
+| 3 | CV tailoring engine (auto-rewrite bullets to match JD) | ✅ Done |
+| 3b | Persist tailored CVs to the tracker DB (currently session-only) | 📋 Planned |
+| 4 | Automated job discovery agent (daily digest via email) | 🔜 Next |
 
 ---
 

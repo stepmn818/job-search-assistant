@@ -54,6 +54,30 @@ If the JD does not distinguish, treat all listed items as required.
 - Do not inflate scores to be encouraging. A 50 is an honest 50."""
 
 
+_TAILOR_SYSTEM_PROMPT = """You are a senior recruiter helping a candidate tailor their CV to a specific job description. \
+Your job is to reword existing bullets so they use the JD's language and surface relevant evidence \
+already present in the CV — never to invent experience, skills, or metrics that aren't there.
+
+Return ONLY valid JSON with this exact structure (no markdown, no extra text):
+{
+  "summary": "<one sentence describing the overall tailoring approach>",
+  "tailored_bullets": [
+    {
+      "original": "<a bullet copied EXACTLY as it appears in the CV, verbatim>",
+      "rewritten": "<the same bullet reworded to better match the JD>",
+      "reason": "<one short phrase naming the JD requirement or keyword this rewrite targets>"
+    }
+  ]
+}
+
+Rules:
+- "original" must be copied character-for-character from the CV so it can be matched back to the source text. Do not paraphrase it.
+- Only include bullets where a rewrite would meaningfully improve the match to the JD — do not pad the list to a fixed count, and do not include unchanged bullets.
+- Never fabricate skills, tools, years of experience, employers, titles, or metrics that are not evidenced in the original CV. Rewording must stay strictly truthful to what's there.
+- Prefer surfacing the JD's own terminology (e.g. its tool names, methodologies, seniority language) where the CV already demonstrates the underlying substance.
+- If the CV has no bullets worth changing for this JD, return an empty "tailored_bullets" list rather than forcing changes. And explain why there is no meaningful improvement"""
+
+
 def _get_secret(key: str) -> str:
     try:
         return st.secrets.get(key, "")
@@ -164,6 +188,61 @@ def analyze_fit(cv_text: str, jd_text: str) -> dict:
             + 0.25 * s["domain"]
             + 0.10 * s["education"]
         )
+
+        result["full_response"] = raw
+        return result
+
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Could not parse Claude's response as JSON: {e}") from e
+    except anthropic.APIError as e:
+        raise RuntimeError(f"Anthropic API error: {e}") from e
+
+
+def tailor_cv(cv_text: str, jd_text: str) -> dict:
+    """
+    Send CV and JD to Claude and return a per-bullet tailoring diff.
+    Returns a dict with: summary, tailored_bullets (list of
+    {original, rewritten, reason}), full_response.
+    Raises RuntimeError on API/key errors, ValueError on unparseable response.
+    """
+
+    client = _get_client()
+
+    try:
+        message = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=2048,
+            temperature=0.5,
+            system=[
+                {
+                    "type": "text",
+                    "text": _TAILOR_SYSTEM_PROMPT,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ],
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": f"CV:\n{cv_text}",
+                            "cache_control": {"type": "ephemeral"},
+                        },
+                        {
+                            "type": "text",
+                            "text": f"JOB DESCRIPTION:\n{jd_text}",
+                        },
+                    ],
+                }
+            ],
+        )
+
+        raw = message.content[0].text.strip()
+
+        # Strip markdown code fences if present
+        clean = re.sub(r"^```(?:json)?|```$", "", raw, flags=re.MULTILINE).strip()
+        result = json.loads(clean)
 
         result["full_response"] = raw
         return result
